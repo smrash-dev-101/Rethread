@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ReThread — AI Content Repurposing Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d0f; --bg2:#111115; --bg3:#16161b; --bg4:#1c1c23; --bgh:#222229;
+  --b0:rgba(255,255,255,0.06); --b1:rgba(255,255,255,0.10); --b2:rgba(255,255,255,0.18);
+  --accent:#7c6af7; --ab:#9b8dff; --ad:rgba(124,106,247,0.15); --ag:rgba(124,106,247,0.25);
+  --a2:#f7936a; --a2d:rgba(247,147,106,0.15);
+  --green:#4ade80; --yellow:#fbbf24; --red:#f87171;
+  --t1:#f2f2f5; --t2:#9898a8; --tm:#5a5a6e; --td:#3a3a4a;
+  --fd:'Syne',sans-serif; --fb:'DM Sans',sans-serif; --fm:'JetBrains Mono',monospace;
+  --r1:6px; --r2:10px; --r3:14px; --r4:20px;
+  --sw:220px; --th:56px;
+}
+html{font-size:14px;-webkit-font-smoothing:antialiased}
+body{font-family:var(--fb);background:var(--bg);color:var(--t1);min-height:100vh;display:flex;overflow:hidden}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:var(--b2);border-radius:99px}
+button{font-family:var(--fb);cursor:pointer;border:none;outline:none;transition:all .18s ease}
+button:disabled{cursor:not-allowed;opacity:.45}
+input,textarea{font-family:var(--fb);color:var(--t1);background:transparent;border:none;outline:none;resize:none}
+input::placeholder,textarea::placeholder{color:var(--tm)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{from{background-position:-200% center}to{background-position:200% center}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  position:fixed;top:0;left:0;bottom:0;width:var(--sw);
+  background:var(--bg2);border-right:1px solid var(--b0);
+  display:flex;flex-direction:column;z-index:100;
+}
+.logo{height:var(--th);display:flex;align-items:center;padding:0 20px;border-bottom:1px solid var(--b0);gap:9px}
+.logo-icon{width:28px;height:28px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:16px;font-weight:800;color:#fff;flex-shrink:0}
+.logo-text{font-family:var(--fd);font-weight:700;font-size:16px;letter-spacing:-.3px}
+nav{flex:1;padding:12px 8px;overflow-y:auto}
+.nav-label{font-size:11px;font-family:var(--fm);color:var(--tm);letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;margin-bottom:4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r2);cursor:pointer;color:var(--t2);font-size:14px;margin-bottom:2px;transition:all .18s;user-select:none;background:transparent}
+.nav-item:hover{background:var(--bg4);color:var(--t1)}
+.nav-item.active{background:var(--bg4);color:var(--t1);font-weight:500}
+.nav-item .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);margin-left:auto}
+.sidebar-bottom{padding:12px 12px 16px}
+.usage-meter{background:var(--bg3);border:1px solid var(--b0);border-radius:var(--r2);padding:12px;margin-bottom:8px}
+.usage-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.usage-label{font-size:12px;color:var(--t2);font-family:var(--fm)}
+.usage-count{font-size:12px;font-family:var(--fm);color:var(--t1);font-weight:600}
+.usage-bar{height:4px;background:var(--b0);border-radius:99px;overflow:hidden}
+.usage-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--ab));border-radius:99px;transition:width .4s ease}
+.usage-sub{font-size:11px;color:var(--tm);margin-top:6px}
+.upgrade-btn{width:100%;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--ad);border:1px solid rgba(124,106,247,.25);border-radius:var(--r2);color:var(--ab);font-size:13px;font-weight:600;cursor:pointer}
+.upgrade-btn:hover{background:rgba(124,106,247,.22);border-color:rgba(124,106,247,.4)}
+
+/* ── MAIN ── */
+#main{margin-left:var(--sw);flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#topbar{height:var(--th);display:flex;align-items:center;justify-content:space-between;padding:0 32px;border-bottom:1px solid var(--b0);background:var(--bg2);flex-shrink:0}
+.topbar-title{font-family:var(--fd);font-weight:700;font-size:16px;letter-spacing:-.2px}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.status-dot{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tm);font-family:var(--fm)}
+.status-dot .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+.top-upgrade{display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--accent);border-radius:var(--r2);color:#fff;font-size:13px;font-weight:600}
+.top-upgrade:hover{background:var(--ab);transform:translateY(-1px);box-shadow:0 4px 16px rgba(124,106,247,.4)}
+
+/* ── PAGE ── */
+#page{flex:1;overflow-y:auto;padding:32px}
+
+/* ── VIEWS ── */
+.view{display:none;max-width:860px;margin:0 auto;animation:fadeIn .3s ease}
+.view.active{display:block}
+
+/* ── DASHBOARD ── */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px}
+.page-title{font-family:var(--fd);font-size:22px;font-weight:800;letter-spacing:-.4px;margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--tm)}
+.limit-warn{display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:var(--r2);margin-bottom:20px;font-size:13px;color:var(--red)}
+.input-card{background:var(--bg3);border:1px solid var(--b0);border-radius:var(--r3);overflow:hidden;margin-bottom:16px;transition:border-color .18s}
+.input-card:focus-within{border-color:rgba(124,106,247,.35)}
+.input-toolbar{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--b0);background:var(--bg4);gap:8px}
+.input-toolbar-label{font-size:12px;color:var(--tm);font-family:var(--fm);flex:1;text-transform:uppercase;letter-spacing:.06em}
+.try-btn{font-size:11px;color:var(--accent);background:var(--ad);border:1px solid rgba(124,106,247,.2);border-radius:var(--r1);padding:3px 10px;cursor:pointer;font-family:var(--fm)}
+.char-count{font-size:11px;font-family:var(--fm);color:var(--td)}
+.char-count span{color:var(--t2)}
+#contentArea{width:100%;min-height:220px;padding:16px;font-size:14px;line-height:1.75;color:var(--t1)}
+.url-row{border-top:1px solid var(--b0);padding:10px 14px;display:flex;align-items:center;gap:10px}
+.soon-badge{font-size:11px;font-family:var(--fm);color:var(--td);background:var(--bgh);padding:2px 8px;border-radius:4px}
+.platform-card{background:var(--bg3);border:1px solid var(--b0);border-radius:var(--r3);padding:16px;margin-bottom:16px}
+.platform-label{font-size:11px;font-family:var(--fm);color:var(--tm);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.platform-pills{display:flex;flex-wrap:wrap;gap:7px}
+.pill{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--r4);border:1px solid var(--b0);background:transparent;color:var(--tm);font-size:13px;cursor:pointer;transition:all .18s;user-select:none}
+.pill.on{font-weight:500}
+.pill .pdot{width:5px;height:5px;border-radius:50%;display:none}
+.pill.on .pdot{display:block}
+.error-box{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:var(--r2);margin-bottom:16px;font-size:13px;color:var(--red)}
+.gen-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:15px 24px;background:linear-gradient(135deg,var(--accent),#5a50e8);border:1px solid transparent;border-radius:var(--r3);color:#fff;font-family:var(--fd);font-weight:700;font-size:16px;letter-spacing:-.2px;cursor:pointer;transition:all .18s;box-shadow:0 4px 20px rgba(124,106,247,.35)}
+.gen-btn:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(124,106,247,.45)}
+.gen-btn:disabled{background:var(--bg4);border-color:var(--b0);color:var(--td);box-shadow:none;transform:none}
+.gen-sub{font-size:13px;font-family:var(--fb);font-weight:400;opacity:.75}
+.min-hint{text-align:center;font-size:12px;color:var(--tm);margin-top:8px}
+
+/* ── LOADING ── */
+#loadingState{display:none;flex-direction:column;align-items:center;justify-content:center;padding:80px 40px;animation:fadeIn .3s ease}
+#loadingState.show{display:flex}
+.spin-orb{width:72px;height:72px;border-radius:50%;background:conic-gradient(from 0deg,var(--accent),var(--a2),var(--accent));animation:spin 1.4s linear infinite;position:relative;margin-bottom:32px}
+.spin-inner{position:absolute;inset:4px;border-radius:50%;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:22px}
+.loading-title{font-family:var(--fd);font-weight:700;font-size:20px;letter-spacing:-.3px;margin-bottom:10px}
+.loading-msg{font-size:13px;color:var(--tm);font-family:var(--fm);margin-bottom:28px;min-height:20px;text-align:center}
+.loading-bar-wrap{width:240px;height:3px;background:var(--b0);border-radius:99px;overflow:hidden}
+.loading-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--a2),var(--accent));background-size:200% 100%;animation:shimmer 1.8s ease infinite;border-radius:99px;width:60%}
+.loading-sub{margin-top:20px;font-size:12px;color:var(--td)}
+
+/* ── RESULTS ── */
+#resultsSection{display:none}
+#resultsSection.show{display:block;animation:fadeIn .3s ease}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--bg3);border:1px solid var(--b0);border-radius:var(--r2);padding:14px 16px;text-align:center}
+.stat-val{font-family:var(--fd);font-size:28px;font-weight:800;color:var(--ab);line-height:1;margin-bottom:4px}
+.stat-lbl{font-size:12px;color:var(--tm);font-family:var(--fm)}
+.output-grid{display:grid;gap:14px}
+.output-card{background:var(--bg3);border:1px solid var(--b0);border-radius:var(--r3);overflow:hidden;animation:fadeIn .35s ease both;transition:border-color .18s}
+.output-card:hover{border-color:var(--b1)}
+.output-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--b0);background:var(--bg4)}
+.plat-tag{display:flex;align-items:center;gap:10px}
+.plat-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+.plat-name{font-size:13px;font-weight:600}
+.plat-words{font-size:11px;color:var(--tm);font-family:var(--fm)}
+.copy-btn{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:var(--r1);background:var(--bgh);border:1px solid var(--b1);color:var(--t2);font-size:12px;font-weight:500;cursor:pointer}
+.copy-btn:hover{border-color:var(--accent);color:var(--accent)}
+.copy-btn.ok{border-color:rgba(74,222,128,.3);color:var(--green);background:rgba(74,222,128,.08)}
+.output-body{padding:16px;font-size:13.5px;line-height:1.75;color:var(--t2);white-space:pre-wrap;word-break:break-word;max-height:380px;overflow-y:auto;position:relative}
+.output-body.locked{max-height:100px;overflow:hidden;filter:blur(4px);user-select:none;color:var(--td)}
+.wm-tag{padding:8px 16px 12px;font-size:11px;color:var(--td);font-family:var(--fm);border-top:1px solid var(--b0)}
+.lock-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 20%,var(--bg3) 70%);display:flex;align-items:flex-end;justify-content:center;padding-bottom:16px}
+.lock-box{width:calc(100% - 32px);background:var(--bg4);border:1px solid var(--b1);border-radius:var(--r2);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.lock-title{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:2px}
+.lock-sub{font-size:12px;color:var(--tm)}
+.lock-upgrade{padding:8px 16px;background:var(--accent);border-radius:var(--r2);color:#fff;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0}
+.lock-upgrade:hover{background:var(--ab);transform:scale(1.02)}
+.upgrade-cta{margin-top:20px;padding:20px 24px;background:linear-gradient(135deg,var(--ad),var(--a2d));border:1px solid rgba(124,106,247,.2);border-radius:var(--r3);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.upgrade-cta-title{font-family:var(--fd);font-size:17px;font-weight:700;margin-bottom:4px}
+.upgrade-cta-sub{font-size:13px;color:var(--tm)}
+.upgrade-cta-sub strong{color:var(--t1)}
+.upgrade-cta-btn{padding:11px 24px;background:var(--accent);border-radius:var(--r2);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--fd);white-space:nowrap}
+.upgrade-cta-btn:hover{background:var(--ab);transform:translateY(-1px)}
+.new-content-btn{display:flex;align-items:center;gap:6px;padding:8px 16px;background:var(--bg4);border:1px solid var(--b1);border-radius:var(--r2);color:var(--t2);font-size:13px;font-weight:500;cursor:pointer}
+.new-content-btn:hover{border-color:var(--b2);color:var(--t1)}
+
+/* ── HISTORY / SETTINGS PLACEHOLDER ── */
+.empty-state{max-width:480px;margin:60px auto;text-align:center}
+.empty-icon{width:56px;height:56px;border-radius:50%;background:var(--bg4);border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:22px}
+.empty-title{font-family:var(--fd);font-size:20px;font-weight:700;margin-bottom:8px}
+.empty-sub{font-size:14px;color:var(--tm);line-height:1.6}
+
+/* ── SETTINGS ── */
+.settings-section{margin-bottom:28px}
+.settings-section-header{margin-bottom:16px}
+.settings-section-title{font-family:var(--fd);font-size:15px;font-weight:700;margin-bottom:4px}
+.settings-section-sub{font-size:13px;color:var(--tm)}
+.settings-card{background:var(--bg3);border:1px solid var(--b0);border-radius:var(--r3);overflow:hidden}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;gap:16px;border-bottom:1px solid var(--b0);flex-wrap:wrap}
+.settings-row:last-child{border-bottom:none}
+.settings-row-label{font-size:14px;font-weight:500;color:var(--t1);margin-bottom:2px}
+.settings-row-sub{font-size:12px;color:var(--tm)}
+.api-input-wrap{display:flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--b1);border-radius:var(--r2);padding:10px 12px;margin-bottom:10px}
+.api-input-wrap input{flex:1;font-size:13px;font-family:var(--fm)}
+.key-status{display:flex;align-items:center;gap:6px;font-size:13px;font-family:var(--fm);margin-bottom:12px}
+.key-status .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.api-hint{margin-top:12px;padding:10px 12px;background:rgba(124,106,247,.06);border:1px solid rgba(124,106,247,.15);border-radius:var(--r1);font-size:12px;color:var(--tm);line-height:1.5;display:flex;gap:8px}
+code{font-family:var(--fm);background:var(--bgh);padding:1px 5px;border-radius:3px;color:var(--accent)}
+.action-btn{padding:7px 16px;background:var(--accent);border-radius:var(--r2);color:#fff;font-size:13px;font-weight:600;cursor:pointer}
+.action-btn:hover{background:var(--ab);transform:translateY(-1px)}
+.secondary-btn{padding:6px 14px;background:var(--bgh);border:1px solid var(--b1);border-radius:var(--r1);color:var(--t2);font-size:12px;cursor:pointer}
+.secondary-btn:hover{border-color:var(--b2);color:var(--t1)}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="logo">
+    <div class="logo-icon">R</div>
+    <span class="logo-text">ReThread</span>
+  </div>
+  <nav>
+    <div class="nav-label">Menu</div>
+    <div class="nav-item active" onclick="switchView('dashboard',this)" id="nav-dashboard">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Repurpose
+      <span class="dot"></span>
+    </div>
+    <div class="nav-item" onclick="switchView('history',this)" id="nav-history">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+      History
+    </div>
+    <div class="nav-item" onclick="switchView('settings',this)" id="nav-settings">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="usage-meter">
+      <div class="usage-row">
+        <span class="usage-label">Free uses today</span>
+        <span class="usage-count" id="usageCount">0/3</span>
+      </div>
+      <div class="usage-bar"><div class="usage-fill" id="usageFill" style="width:0%"></div></div>
+      <div class="usage-sub" id="usageSub">3 remaining · resets midnight</div>
+    </div>
+    <button class="upgrade-btn">
+      <span style="display:flex;align-items:center;gap:8px">
+        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Upgrade Plan
+      </span>
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <span class="topbar-title" id="topbarTitle">Repurpose Content</span>
+    <div class="topbar-right">
+      <div class="status-dot"><span class="dot"></span>Claude AI · Online</div>
+      <button class="top-upgrade">
+        <svg width="13" height="13" fill="white" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Upgrade
+      </button>
+    </div>
+  </div>
+
+  <div id="page">
+
+    <!-- DASHBOARD VIEW -->
+    <div class="view active" id="view-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Repurpose Content</div>
+          <div class="page-sub">Paste your content — blog post, transcript, script, or any long-form text.</div>
+        </div>
+        <button class="new-content-btn" id="newContentBtn" onclick="resetToInput()" style="display:none">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15a9 9 0 1 0 .49-3.4"/></svg>
+          New Content
+        </button>
+      </div>
+
+      <div class="limit-warn" id="limitWarn" style="display:none">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>You've used all <strong>3 free repurposings</strong> for today. Resets at midnight — or upgrade for unlimited.</span>
+        <button class="action-btn" style="margin-left:auto;flex-shrink:0">Upgrade</button>
+      </div>
+
+      <!-- INPUT -->
+      <div id="inputSection">
+        <div class="input-card" id="inputCard">
+          <div class="input-toolbar">
+            <svg width="14" height="14" fill="none" stroke="var(--tm)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+            <span class="input-toolbar-label">Your Content</span>
+            <button class="try-btn" onclick="loadExample()">Try example</button>
+            <div class="char-count"><span id="wordCount">0</span>w · <span id="charCount">0</span>/8000</div>
+          </div>
+          <textarea id="contentArea" placeholder="Paste your blog post, podcast transcript, YouTube script, or any long-form content here...&#10;&#10;Tip: Works best with 200+ words. The more context, the better the outputs." oninput="handleInput(this)"></textarea>
+          <div class="url-row">
+            <svg width="14" height="14" fill="none" stroke="var(--tm)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75,15.02 15.5,12 9.75,8.98 9.75,15.02"/></svg>
+            <input placeholder="YouTube URL auto-transcription — coming soon" disabled style="flex:1;font-size:12px;color:var(--td);cursor:not-allowed"/>
+            <span class="soon-badge">Soon</span>
+          </div>
+        </div>
+
+        <div class="platform-card">
+          <div class="platform-label">Output Platforms <span id="pillCount" style="color:var(--td)">(5 selected · min 2)</span></div>
+          <div class="platform-pills" id="platformPills"></div>
+        </div>
+
+        <div class="error-box" id="errorBox" style="display:none">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="errorText"></span>
+        </div>
+
+        <button class="gen-btn" id="genBtn" onclick="generate()" disabled>
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26 12,2"/></svg>
+          Repurpose with AI
+          <span class="gen-sub" id="genSub">· 3/3 free uses today</span>
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/></svg>
+        </button>
+        <div class="min-hint" id="minHint" style="display:none"></div>
+      </div>
+
+      <!-- LOADING -->
+      <div id="loadingState">
+        <div class="spin-orb"><div class="spin-inner">✦</div></div>
+        <div class="loading-title">AI is repurposing...</div>
+        <div class="loading-msg" id="loadingMsg">Reading your content...</div>
+        <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
+        <div class="loading-sub">Usually takes 10–20 seconds</div>
+      </div>
+
+      <!-- RESULTS -->
+      <div id="resultsSection">
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="output-grid" id="outputGrid"></div>
+        <div class="upgrade-cta" id="upgradeCta" style="display:none">
+          <div>
+            <div class="upgrade-cta-title" id="ctaTitle">Unlock locked outputs</div>
+            <div class="upgrade-cta-sub">Creator plan · <strong>$19/month</strong> · Unlimited repurposings · No watermarks</div>
+          </div>
+          <button class="upgrade-cta-btn">Upgrade Now — $19/mo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY VIEW -->
+    <div class="view" id="view-history">
+      <div class="page-header">
+        <div><div class="page-title">History</div><div class="page-sub">Your recent repurposings · stored locally in your browser</div></div>
+        <button class="secondary-btn" onclick="clearHistory()" style="color:var(--red);border-color:rgba(248,113,113,.2)">Clear All</button>
+      </div>
+      <div id="historyContent"></div>
+    </div>
+
+    <!-- SETTINGS VIEW -->
+    <div class="view" id="view-settings">
+      <div class="page-header"><div><div class="page-title">Settings</div><div class="page-sub">Manage your API key, usage, and preferences.</div></div></div>
+
+      <div class="settings-section">
+        <div class="settings-section-header">
+          <div class="settings-section-title">Anthropic API Key</div>
+          <div class="settings-section-sub">Required to power the AI engine. Add to your .env.local file — never stored in browser.</div>
+        </div>
+        <div class="settings-card">
+          <div style="padding:16px 18px">
+            <div class="key-status">
+              <span class="dot" id="keyDot" style="background:var(--green)"></span>
+              <span id="keyStatus" style="color:var(--green);font-family:var(--fm)">Checking...</span>
+            </div>
+            <div class="api-input-wrap">
+              <svg width="14" height="14" fill="none" stroke="var(--tm)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+              <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." style="flex:1;font-size:13px;font-family:var(--fm)"/>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="action-btn" onclick="saveApiKey()">Save Key</button>
+              <a href="https://console.anthropic.com/account/keys" target="_blank" style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--bgh);border:1px solid var(--b1);border-radius:var(--r2);color:var(--t2);font-size:13px;text-decoration:none">
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                Get API Key
+              </a>
+            </div>
+            <div class="api-hint">
+              <svg width="13" height="13" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>For permanent setup, add <code>VITE_ANTHROPIC_API_KEY=sk-ant-...</code> to your <code>.env.local</code> file then redeploy.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-header"><div class="settings-section-title">Usage</div></div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div><div class="settings-row-label">Today's usage</div><div class="settings-row-sub" id="settingsUsageSub">Loading...</div></div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:120px;height:6px;background:var(--b0);border-radius:99px;overflow:hidden"><div id="settingsUsageFill" style="height:100%;background:linear-gradient(90deg,var(--accent),var(--ab));border-radius:99px;transition:width .4s"></div></div>
+              <span style="font-family:var(--fm);font-size:12px;color:var(--t2)" id="settingsUsageCount">0/3</span>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Reset usage counter</div><div class="settings-row-sub">For testing purposes</div></div>
+            <button class="secondary-btn" onclick="resetUsage()">Reset Counter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-header"><div class="settings-section-title">Plan</div></div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div><div class="settings-row-label">Current Plan</div><div class="settings-row-sub">Free tier · 3 repurposings per day</div></div>
+            <button class="action-btn">Upgrade to Creator — $19/mo</button>
+          </div>
+          <div class="settings-row">
+            <div><div class="settings-row-label">Creator Plan</div><div class="settings-row-sub">Unlimited · No watermarks · Priority AI</div></div>
+            <span style="font-size:12px;font-family:var(--fm);color:var(--tm)">$19 / month</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══ PLATFORM CONFIG ═══
+const PLATFORMS = {
+  linkedin:  {id:'linkedin',  label:'LinkedIn',     icon:'💼', color:'#0077b5', dim:'rgba(0,119,181,.15)'},
+  twitter:   {id:'twitter',   label:'Twitter / X',  icon:'✕',  color:'#e7e9ea', dim:'rgba(231,233,234,.1)'},
+  tiktok:    {id:'tiktok',    label:'TikTok Script',icon:'♪',  color:'#fe2c55', dim:'rgba(254,44,85,.15)'},
+  instagram: {id:'instagram', label:'Instagram',    icon:'◈',  color:'#e1306c', dim:'rgba(225,48,108,.15)'},
+  newsletter:{id:'newsletter',label:'Newsletter',   icon:'✉',  color:'#f7936a', dim:'rgba(247,147,106,.15)'},
+  youtube:   {id:'youtube',   label:'YouTube',      icon:'▶',  color:'#ff0000', dim:'rgba(255,0,0,.12)'},
+  threads:   {id:'threads',   label:'Threads',      icon:'@',  color:'#aaa',    dim:'rgba(170,170,170,.1)'},
+}
+const ORDER = ['linkedin','twitter','tiktok','instagram','newsletter','youtube','threads']
+let active = new Set(['linkedin','twitter','tiktok','instagram','newsletter'])
+
+// ═══ USAGE ═══
+const FREE_LIMIT = 3
+function today(){ return new Date().toISOString().split('T')[0] }
+function getUsage(){
+  try{
+    const r = localStorage.getItem('rt_usage')
+    if(!r) return {date:today(),count:0}
+    const d = JSON.parse(r)
+    if(d.date!==today()) return {date:today(),count:0}
+    return d
+  }catch{return {date:today(),count:0}}
+}
+function saveUsage(d){ localStorage.setItem('rt_usage',JSON.stringify(d)) }
+function incUsage(){ const d=getUsage(); d.count++; saveUsage(d); return d.count }
+function resetUsage(){ saveUsage({date:today(),count:0}); updateUsageUI() }
+
+function updateUsageUI(){
+  const {count} = getUsage()
+  const rem = Math.max(0,FREE_LIMIT-count)
+  const pct = Math.min((count/FREE_LIMIT)*100,100)
+  document.getElementById('usageCount').textContent = `${count}/${FREE_LIMIT}`
+  document.getElementById('usageFill').style.width = pct+'%'
+  document.getElementById('usageSub').textContent = count>=FREE_LIMIT ? 'Limit reached · upgrade' : `${rem} remaining · resets midnight`
+  document.getElementById('genSub').textContent = `· ${count}/${FREE_LIMIT} free uses today`
+  // settings
+  document.getElementById('settingsUsageSub').textContent = `${rem} repurposings remaining`
+  document.getElementById('settingsUsageCount').textContent = `${count}/${FREE_LIMIT}`
+  document.getElementById('settingsUsageFill').style.width = pct+'%'
+  // limit warn
+  document.getElementById('limitWarn').style.display = count>=FREE_LIMIT ? 'flex':'none'
+  checkGenBtn()
+}
+
+// ═══ PLATFORMS ═══
+function buildPills(){
+  const c = document.getElementById('platformPills')
+  c.innerHTML = ''
+  ORDER.forEach(id=>{
+    const p = PLATFORMS[id]
+    const isOn = active.has(id)
+    const btn = document.createElement('button')
+    btn.className = 'pill'+(isOn?' on':'')
+    btn.id = 'pill-'+id
+    btn.style.color = isOn ? p.color : ''
+    btn.style.background = isOn ? p.dim : ''
+    btn.style.borderColor = isOn ? p.color+'66' : ''
+    btn.innerHTML = `<span>${p.icon}</span><span>${p.label}</span><span class="pdot" style="background:${p.color}"></span>`
+    btn.onclick = ()=>togglePill(id)
+    c.appendChild(btn)
+  })
+  document.getElementById('pillCount').textContent = `(${active.size} selected · min 2)`
+}
+
+function togglePill(id){
+  if(active.has(id)){
+    if(active.size<=2) return
+    active.delete(id)
+  } else {
+    active.add(id)
+  }
+  buildPills()
+  checkGenBtn()
+}
+
+// ═══ INPUT ═══
+const EXAMPLE = `Last week I made a mistake that cost me 3 hours of work.
+
+I was so focused on shipping a new feature that I skipped writing tests. "I'll add them later," I told myself. We all know how that story ends.
+
+Later never came. The feature shipped, users found edge cases I hadn't considered, and I spent the next day debugging code I'd already mentally moved on from.
+
+The lesson? Shortcuts in your process compound. One skipped test becomes ten. Ten becomes a codebase nobody wants to touch. The technical debt wasn't the real cost — the real cost was the mental tax of knowing the foundation was shaky.
+
+Ship fast, but ship with intention. The extra 20 minutes you spend now is worth the 3 hours you don't spend debugging next week.`
+
+function loadExample(){
+  document.getElementById('contentArea').value = EXAMPLE
+  handleInput(document.getElementById('contentArea'))
+}
+
+function handleInput(el){
+  const v = el.value.slice(0,8000)
+  if(el.value.length>8000) el.value=v
+  const words = v.trim() ? v.trim().split(/\s+/).length : 0
+  document.getElementById('charCount').textContent = v.length
+  document.getElementById('wordCount').textContent = words
+  checkGenBtn()
+}
+
+function checkGenBtn(){
+  const c = document.getElementById('contentArea').value.trim()
+  const {count} = getUsage()
+  const ok = c.length>=80 && count<FREE_LIMIT
+  const btn = document.getElementById('genBtn')
+  btn.disabled = !ok
+  const hint = document.getElementById('minHint')
+  if(c.length>0 && c.length<80){
+    hint.textContent = `Add ${80-c.length} more characters to enable`
+    hint.style.display='block'
+  } else {
+    hint.style.display='none'
+  }
+}
+
+// ═══ PROMPTS ═══
+function buildPrompt(content, platforms){
+  const instrs = {
+    linkedin:`LINKEDIN: Write a compelling LinkedIn post (150-250 words). Bold scroll-stopping first line. Short paragraphs. End with thought-provoking question or CTA. 3-5 hashtags at end.`,
+    twitter:`TWITTER: Write a 5-tweet thread. Format exactly: 1/ [hook max 240 chars] 2/ [point 1] 3/ [point 2] 4/ [point 3] 5/ [takeaway+CTA]. Each tweet max 280 chars.`,
+    tiktok:`TIKTOK: Script for 45-60 second video. Labels: HOOK (0-3s): / SETUP (3-10s): / CONTENT (10-50s): / CTA (50-60s):. Conversational, fast, energetic spoken words.`,
+    instagram:`INSTAGRAM: Caption 100-150 words. First line hooks before "more" fold. Mini story. Question at end. 8-12 hashtags on new line.`,
+    newsletter:`NEWSLETTER: Email intro 150-200 words. First line: SUBJECT: [subject]. Conversational opener, build intrigue, one insight teaser, transition sentence.`,
+    youtube:`YOUTUBE: Description 200-250 words. 2-sentence SEO hook. "In this video:" bullet list. CHAPTERS: 0:00 / 2:30 / 5:00 / 8:30. Subscribe CTA. TAGS: comma-separated.`,
+    threads:`THREADS: 80-120 words. Casual, opinionated. Short sentences. Clear stance. Open question at end. No hashtags.`,
+  }
+  const selected = platforms.map(p=>instrs[p]).filter(Boolean).join('\n\n')
+  return `You are an expert social media strategist. Repurpose the content below into platform-native formats.
+
+ORIGINAL CONTENT:
+"""
+${content.substring(0,4000)}
+"""
+
+${selected}
+
+Return ONLY valid JSON. No markdown, no backticks, no explanation. Keys must match exactly: ${platforms.join(', ')}
+
+Example: {"linkedin":"text here","twitter":"1/ tweet...\\n2/ tweet..."}
+
+Generate:`
+}
+
+// ═══ HISTORY ═══
+function saveToHistory(content, results, platforms){
+  try{
+    const raw = localStorage.getItem('rt_history')
+    const hist = raw ? JSON.parse(raw) : []
+    hist.unshift({
+      date: new Date().toLocaleDateString(),
+      preview: content.substring(0,80).replace(/\n/g,' ')+'...',
+      results,
+      platforms
+    })
+    localStorage.setItem('rt_history', JSON.stringify(hist.slice(0,20)))
+  }catch{}
+}
+
+function renderHistory(){
+  const c = document.getElementById('historyContent')
+  try{
+    const raw = localStorage.getItem('rt_history')
+    const hist = raw ? JSON.parse(raw) : []
+    if(!hist.length){
+      c.innerHTML=`<div class="empty-state"><div class="empty-icon">🕐</div><div class="empty-title">No history yet</div><div class="empty-sub">Your repurposed content will appear here after your first generation.<br/>History is stored locally in your browser.</div></div>`
+      return
+    }
+    c.innerHTML = hist.map((e,i)=>`
+      <div style="background:var(--bg3);border:1px solid var(--b0);border-radius:var(--r3);overflow:hidden;margin-bottom:16px">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--b0);background:var(--bg4);display:flex;align-items:center;gap:10px">
+          <span style="font-size:12px;color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.preview}</span>
+          <span style="font-size:11px;color:var(--tm);font-family:var(--fm);flex-shrink:0">${e.date}</span>
+        </div>
+        <div style="padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px">
+          ${Object.keys(e.results||{}).map(pid=>{
+            const p=PLATFORMS[pid]; if(!p) return ''
+            return `<button onclick="copyHistEntry('${i}','${pid}')" id="hbtn-${i}-${pid}" style="display:flex;align-items:center;gap:6px;padding:5px 12px;background:${p.dim};border:1px solid ${p.color}44;border-radius:var(--r1);color:${p.color};font-size:12px;cursor:pointer;transition:all .18s">${p.icon} ${p.label}</button>`
+          }).join('')}
+        </div>
+      </div>
+    `).join('')
+  }catch{ c.innerHTML='<div style="color:var(--tm);padding:20px">Failed to load history.</div>' }
+}
+
+function clearHistory(){
+  localStorage.removeItem('rt_history')
+  renderHistory()
+}
+
+async function copyHistEntry(i,pid){
+  try{
+    const hist = JSON.parse(localStorage.getItem('rt_history')||'[]')
+    const text = hist[i]?.results?.[pid] || ''
+    await navigator.clipboard.writeText(text)
+    const btn = document.getElementById(`hbtn-${i}-${pid}`)
+    if(btn){ const orig=btn.innerHTML; btn.innerHTML='✓ Copied'; btn.style.color='var(--green)'; setTimeout(()=>{btn.innerHTML=orig;btn.style.color=PLATFORMS[pid].color},2000) }
+  }catch{}
+}
+
+// ═══ GENERATE ═══
+const LOADING_MSGS = ['Reading your content...','Identifying key insights...','Crafting platform hooks...','Writing LinkedIn post...','Building Twitter thread...','Scripting TikTok...','Polishing outputs...']
+let msgInterval
+
+function showError(msg){
+  const b=document.getElementById('errorBox')
+  document.getElementById('errorText').textContent=msg
+  b.style.display='flex'
+}
+
+async function generate(){
+  const content = document.getElementById('contentArea').value.trim()
+  const {count} = getUsage()
+  if(content.length<80) return
+  if(count>=FREE_LIMIT){ showError(`You've used all ${FREE_LIMIT} free repurposings today. Upgrade for unlimited.`); return }
+
+  document.getElementById('errorBox').style.display='none'
+  document.getElementById('inputSection').style.display='none'
+  document.getElementById('loadingState').classList.add('show')
+  document.getElementById('resultsSection').classList.remove('show')
+  document.getElementById('newContentBtn').style.display='none'
+
+  let mi=0
+  msgInterval=setInterval(()=>{ mi=(mi+1)%LOADING_MSGS.length; document.getElementById('loadingMsg').textContent=LOADING_MSGS[mi] },1600)
+
+  const platforms = ORDER.filter(p=>active.has(p))
+  const prompt = buildPrompt(content, platforms)
+
+  // Get API key from settings input or placeholder
+  const keyInput = document.getElementById('apiKeyInput').value.trim()
+  const API_KEY = keyInput || 'YOUR_API_KEY_HERE'
+
+  try{
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,messages:[{role:'user',content:prompt}]})
+    })
+    clearInterval(msgInterval)
+    if(!res.ok){
+      const e=await res.json().catch(()=>({}))
+      if(res.status===401) throw new Error('Invalid API key. Check Settings → Anthropic API Key.')
+      if(res.status===429) throw new Error('Rate limited. Please wait a moment and try again.')
+      throw new Error(e.error?.message||`API error ${res.status}`)
+    }
+    const data = await res.json()
+    const raw = data.content?.map(b=>b.text||'').join('')||''
+    let results
+    try{
+      const clean = raw.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim()
+      results = JSON.parse(clean)
+    }catch{
+      const m=raw.match(/\{[\s\S]*\}/)
+      if(m) results=JSON.parse(m[0])
+      else throw new Error('Unexpected response. Please try again.')
+    }
+    incUsage()
+    updateUsageUI()
+    saveToHistory(content, results, platforms)
+    renderResults(results, platforms)
+  }catch(err){
+    clearInterval(msgInterval)
+    document.getElementById('loadingState').classList.remove('show')
+    document.getElementById('inputSection').style.display='block'
+    showError(err.message||'Something went wrong. Please try again.')
+  }
+}
+
+function renderResults(results, platforms){
+  document.getElementById('loadingState').classList.remove('show')
+  document.getElementById('newContentBtn').style.display='flex'
+
+  const totalWords = Object.values(results).reduce((a,v)=>a+(v?.split(/\s+/).length||0),0)
+  const timeSaved = platforms.length*14
+  document.getElementById('statsGrid').innerHTML = [
+    {label:'Platforms',value:platforms.length},
+    {label:'Words Generated',value:totalWords},
+    {label:'Mins Saved',value:`~${timeSaved}`},
+  ].map(s=>`<div class="stat-card"><div class="stat-val">${s.value}</div><div class="stat-lbl">${s.label}</div></div>`).join('')
+
+  const grid = document.getElementById('outputGrid')
+  grid.innerHTML = platforms.map((pid,idx)=>{
+    const p=PLATFORMS[pid]
+    const text=results[pid]||''
+    const words=text.split(/\s+/).length
+    const locked=idx>=2
+    const copyText = text + '\n\n— Made with ReThread.ai (Free Plan)'
+    return `
+    <div class="output-card">
+      <div class="output-head">
+        <div class="plat-tag">
+          <div class="plat-icon" style="background:${p.dim};border:1px solid ${p.color}33;color:${p.color}">${p.icon}</div>
+          <div><div class="plat-name">${p.label}</div><div class="plat-words">${words} words</div></div>
+        </div>
+        ${locked ? `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--accent);font-family:var(--fm);background:var(--ad);border:1px solid rgba(124,106,247,.2);padding:4px 10px;border-radius:99px">🔒 Upgrade to unlock</div>`
+        : `<button class="copy-btn" id="cbtn-${pid}" onclick="copyOutput('${pid}',${JSON.stringify(copyText).replace(/'/g,"&#39;")})">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy
+           </button>`}
+      </div>
+      <div class="output-body${locked?' locked':''}" style="animation:fadeIn .35s ease ${idx*.06}s both">${escHtml(text)}</div>
+      ${!locked ? `<div class="wm-tag">✦ Watermark added on copy · Upgrade to remove</div>` : ''}
+      ${locked ? `<div class="lock-overlay"><div class="lock-box"><div><div class="lock-title">Unlock this output</div><div class="lock-sub">Creator plan · $19/month · Unlimited</div></div><button class="lock-upgrade">Upgrade — $19/mo</button></div></div>` : ''}
+    </div>`
+  }).join('')
+
+  const lockedCount = Math.max(0, platforms.length-2)
+  if(lockedCount>0){
+    document.getElementById('ctaTitle').textContent = `Unlock ${lockedCount} locked output${lockedCount>1?'s':''}`
+    document.getElementById('upgradeCta').style.display='flex'
+  } else {
+    document.getElementById('upgradeCta').style.display='none'
+  }
+
+  document.getElementById('resultsSection').classList.add('show')
+  document.getElementById('resultsSection').scrollIntoView({behavior:'smooth',block:'start'})
+}
+
+async function copyOutput(pid, text){
+  try{ await navigator.clipboard.writeText(text) }catch{
+    const el=document.createElement('textarea');el.value=text;document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el)
+  }
+  const btn=document.getElementById('cbtn-'+pid)
+  if(btn){ btn.innerHTML='<svg width="12" height="12" fill="none" stroke="var(--green)" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg> Copied!'; btn.classList.add('ok'); setTimeout(()=>{ btn.innerHTML='<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy'; btn.classList.remove('ok') },2000) }
+}
+
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') }
+
+function resetToInput(){
+  document.getElementById('inputSection').style.display='block'
+  document.getElementById('loadingState').classList.remove('show')
+  document.getElementById('resultsSection').classList.remove('show')
+  document.getElementById('contentArea').value=''
+  document.getElementById('charCount').textContent='0'
+  document.getElementById('wordCount').textContent='0'
+  document.getElementById('errorBox').style.display='none'
+  document.getElementById('newContentBtn').style.display='none'
+  checkGenBtn()
+  window.scrollTo({top:0,behavior:'smooth'})
+}
+
+// ═══ NAVIGATION ═══
+const PAGE_TITLES = {dashboard:'Repurpose Content',history:'History',settings:'Settings'}
+function switchView(view, el){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(n=>{ n.classList.remove('active'); n.querySelector('.dot')?.remove() })
+  document.getElementById('view-'+view).classList.add('active')
+  el.classList.add('active')
+  if(!el.querySelector('.dot')){ const d=document.createElement('span'); d.className='dot'; el.appendChild(d) }
+  document.getElementById('topbarTitle').textContent = PAGE_TITLES[view]
+  if(view==='history') renderHistory()
+  if(view==='settings') initSettings()
+}
+
+// ═══ SETTINGS ═══
+function initSettings(){
+  updateUsageUI()
+  const saved = localStorage.getItem('rt_api_key')||''
+  if(saved) document.getElementById('apiKeyInput').value=saved
+  const ok = saved && saved.startsWith('sk-ant')
+  document.getElementById('keyDot').style.background = ok ? 'var(--green)':'var(--red)'
+  document.getElementById('keyStatus').textContent = ok ? 'API key configured' : 'No API key configured'
+  document.getElementById('keyStatus').style.color = ok ? 'var(--green)':'var(--red)'
+}
+
+function saveApiKey(){
+  const key=document.getElementById('apiKeyInput').value.trim()
+  if(key){ localStorage.setItem('rt_api_key',key) }
+  const ok=key.startsWith('sk-ant')
+  document.getElementById('keyDot').style.background=ok?'var(--green)':'var(--yellow)'
+  document.getElementById('keyStatus').textContent=ok?'API key saved ✓':'Key saved (format check: should start with sk-ant)'
+  document.getElementById('keyStatus').style.color=ok?'var(--green)':'var(--yellow)'
+}
+
+// ═══ INIT ═══
+buildPills()
+updateUsageUI()
+checkGenBtn()
+// Restore saved API key for generation
+const savedKey=localStorage.getItem('rt_api_key')
+if(savedKey) document.getElementById('apiKeyInput').value=savedKey
+</script>
+</body>
+</html>
