@@ -622,10 +622,6 @@ async function generate(){
   const platforms = ORDER.filter(p=>active.has(p))
   const prompt = buildPrompt(content, platforms)
 
-  // Get API key from settings input or placeholder
-  const keyInput = document.getElementById('apiKeyInput').value.trim()
-  const API_KEY = keyInput || 'YOUR_API_KEY_HERE'
-
   try{
     const res = await fetch('/api/repurpose',{
       method:'POST',
